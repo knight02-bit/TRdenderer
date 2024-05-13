@@ -127,8 +127,8 @@ CoordI4D TRendererDevice::GetBoundingBox(Triangle & tri)
     {
         xMin = std::min(xMin, tri[i].screenPos.x);
         yMin = std::min(yMin, tri[i].screenPos.y);
-        xMax = std::min(xMax, tri[i].screenPos.x);
-        yMax = std::min(yMax, tri[i].screenPos.y);
+        xMax = std::max(xMax, tri[i].screenPos.x);
+        yMax = std::max(yMax, tri[i].screenPos.y);
     }
     return {
         xMin > 0 ? xMin : 0,

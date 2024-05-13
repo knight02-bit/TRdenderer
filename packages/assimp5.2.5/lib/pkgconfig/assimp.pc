@@ -1,0 +1,9 @@
+libdir=K:/code/QTProject/TRenderer/packages/assimp5.2.5/lib
+includedir=K:/code/QTProject/TRenderer/packages/assimp5.2.5/include
+
+Name: Assimp
+Description: Import various well-known 3D model formats in an uniform manner.
+Version: 5.2.4
+Libs: -L${libdir} -lassimp
+Libs.private:  -lz
+Cflags: -I${includedir}

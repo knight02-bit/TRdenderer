@@ -1,4 +1,6 @@
 #include "Model.h"
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 Model::Model(QString path)
 {
@@ -56,12 +58,18 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
     Vertex vertex;
     for(unsigned int i = 0; i < mesh->mNumVertices; ++i)
     {
-        minX = std::min(minX, mesh->mVertices[i].x);
-        minY = std::min(minY, mesh->mVertices[i].y);
-        minZ = std::min(minZ, mesh->mVertices[i].z);
-        maxX = std::max(maxX, mesh->mVertices[i].x);
-        maxY = std::max(maxY, mesh->mVertices[i].y);
-        maxZ = std::max(maxZ, mesh->mVertices[i].z);
+        minX = MIN(minX, mesh->mVertices[i].x);
+        minY = MIN(minY, mesh->mVertices[i].y);
+        minZ = MIN(minZ, mesh->mVertices[i].z);
+        maxX = MAX(maxX, mesh->mVertices[i].x);
+        maxY = MAX(maxY, mesh->mVertices[i].y);
+        maxZ = MAX(maxZ, mesh->mVertices[i].z);
+//        minX = std::min(minX, mesh->mVertices[i].x);
+//        minY = std::min(minY, mesh->mVertices[i].y);
+//        minZ = std::min(minZ, mesh->mVertices[i].z);
+//        maxX = std::max(maxX, mesh->mVertices[i].x);
+//        maxY = std::max(maxY, mesh->mVertices[i].y);
+//        maxZ = std::max(maxZ, mesh->mVertices[i].z);
         vertex.worldSpacePos = Coord3D(mesh->mVertices[i].x,mesh->mVertices[i].y,mesh->mVertices[i].z);
         vertex.normal = Coord3D(mesh->mNormals[i].x,mesh->mNormals[i].y,mesh->mNormals[i].z);
         if(mesh->mTextureCoords[0])//only process one texture

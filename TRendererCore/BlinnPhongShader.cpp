@@ -40,7 +40,8 @@ void BlinnPhongShader::FragmentShader(Fragment &fragment)
 
         Color ambient = light.ambient * diffuseColor;
         Color diffuse = light.diffuse * std::max(glm::dot(normal,lightDir), 0.f) * diffuseColor;
-        Color specular = light.specular * std::pow(std::max(glm::dot(normal, glm::normalize(viewDir + lightDir)), 0.0f), material.shininess) * specularColor;
+        Color specular = light.specular * std::pow(std::max(glm::dot(normal, glm::normalize(viewDir + lightDir)), 0.0f),
+                                                   material.shininess) * specularColor;
         return (ambient + diffuse + specular);
     };
 

@@ -16,15 +16,16 @@ enum class FilterMode{
 
 class Texture
 {
+    // 纹理类型
     enum
     {
-        DIFFUSE,
-        SPECLUAR
+        DIFFUSE,    // 漫反射贴图
+        SPECLUAR    // 镜面反射贴图
     };
     int w;
     int h;
     QImage texture;
-    FilterMode filterMode;
+    FilterMode filterMode;  // 纹理过滤模式
 public:
     QString path;
     Texture() = default;

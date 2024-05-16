@@ -16,6 +16,7 @@ bool Texture::LoadFromImage(QString path)
 }
 
 //****************************************
+// 此处默认使用NearestNeighbor(最近邻采样)
 Color Texture::Sample2D(Coord2D coord)
 {
     int x = static_cast<int>(coord.x * w - 0.5f) % w;
@@ -25,6 +26,21 @@ Color Texture::Sample2D(Coord2D coord)
     y = y < 0 ? h + y : y;
     return Color(texture.pixelColor(x, y).red() / 255.f, texture.pixelColor(x, y).green() / 255.f, texture.pixelColor(x, y).blue() / 255.f);
 }
+
+//Color Texture::Sample2D(Coord2D coord)
+//{
+//    switch (filterMode)
+//    {
+//    case FilterMode::NearestNeighbor:
+//        return SampleNearestNeighbor(coord);
+//    case FilterMode::Bilinear:
+//        return SampleBilinear(coord);
+//    case FilterMode::Trilinear:
+//        return SampleTrilinear(coord);
+//    default:
+//        return Color(122.0f, 122.0f, 122.0f);
+//    }
+//}
 
 //void Texture::GenerateMipmaps()
 //{
@@ -46,21 +62,6 @@ Color Texture::Sample2D(Coord2D coord)
 //    return Color(texture.pixelColor(x, y).red() / 255.f, texture.pixelColor(x, y).green() / 255.f, texture.pixelColor(x, y).blue() / 255.f);
 //}
 
-
-//Color Texture::Sample2D(Coord2D coord)
-//{
-//    switch (filterMode)
-//    {
-//    case FilterMode::NearestNeighbor:
-//        return SampleNearestNeighbor(coord);
-//    case FilterMode::Bilinear:
-//        return SampleBilinear(coord);
-//    case FilterMode::Trilinear:
-//        return SampleTrilinear(coord);
-//    default:
-//        return Color(122.0f, 122.0f, 122.0f);
-//    }
-//}
 
 //Color Texture::SampleNearestNeighbor(Coord2D coord)
 //{

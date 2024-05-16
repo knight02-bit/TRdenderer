@@ -174,7 +174,6 @@ void TRenderer::InitUI()
     QColorDialog::setCustomColor(2,QColor(153, 153, 153));
     QColorDialog::setCustomColor(4,QColor(102, 102, 102));
 
-    ui->RenderWidget->SetRenderMode(VERTEX);
     ui->VertexCheckBox->setChecked(true);
 }
 

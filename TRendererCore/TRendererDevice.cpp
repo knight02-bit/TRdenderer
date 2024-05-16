@@ -1,6 +1,6 @@
 ﻿#include "TRendererDevice.h"
-//#define MIN(a, b) ((a) < (b) ? (a) : (b))
-//#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 
 /********************************************************************************/
@@ -14,28 +14,22 @@ static inline bool JudgeOnTopLeftEdge(CoordI2D v0, CoordI2D v1)
 static inline bool JudgeInsideTriangle(EdgeEquation& triEdge,VectorI3D res)
 {
     bool flag = true;
-
     if(res.x == 0) flag &= triEdge.topLeftFlag[0];
     if(res.y == 0) flag &= triEdge.topLeftFlag[1];
     if(res.z == 0) flag &= triEdge.topLeftFlag[2];
-
-    return flag && ((res.x >= 0 && res.y >= 0 && res.z >=0) || (res.x <= 0 && res.y <= 0 && res.z <= 0));
+    return flag && ((res.x >= 0 && res.y >= 0 && res.z >=0)
+                    || (res.x <= 0 && res.y <= 0 && res.z <= 0));
 }
 
-// 修正透视
-// 在渲染中进行透视修正, 确保近大远小
-// viewDepth：       视点深度, 用于透视计算
-// attribute：       一个存储了顶点属性(例如颜色、纹理坐标等)的向量
-// tri：             三角形对象的引用, 其中包含了用于裁剪的顶点的剪辑空间位置信息
-// barycentric：     重心坐标, 用于在三角形内进行插值计算
+// 实现透视校正插值(利用重心坐标)
 template<class T>
 static inline T CorrectPerspective(float viewDepth, std::vector<T> attribute,
                                    Triangle& tri, glm::vec3& barycentric)
 {
     return viewDepth *
-            (barycentric.x * attribute[0] / tri[0].clipSpacePos.w +
-            barycentric.y * attribute[1] / tri[1].clipSpacePos.w +
-            barycentric.z * attribute[2] / tri[2].clipSpacePos.w);
+            (barycentric.x * attribute[0] / tri[0].clipSpacePos.w
+            + barycentric.y * attribute[1] / tri[1].clipSpacePos.w
+            + barycentric.z * attribute[2] / tri[2].clipSpacePos.w);
 }
 
 // 计算三个值的插值, 使用重心坐标
@@ -114,29 +108,46 @@ void TRendererDevice::ConvertToScreen(Triangle &tri)
 std::vector<Triangle> ConstructTriangle(std::vector<Vertex> vertexList)
 {
     std::vector<Triangle> res;
+
+    // 构造一系列三角形
     for(int i = 0; i < vertexList.size() - 2; ++i)
     {
-        // 计算三角形的顶点索引
+        // 计算三角形的第二和第三个顶点索引(保持顶点顺序一致)
         int k = (i + 1) % vertexList.size();
         int m = (i + 2) % vertexList.size();
-        // 创建三角形并添加到结果向量
         Triangle tri{vertexList[0], vertexList[k], vertexList[m]};
         res.push_back(tri);
     }
     return res;
 }
 
-Fragment ConstructFragment(int x, int y, float z, float viewDepth, Triangle& tri, Vector3D& barycentric)
+// 构造片元(包含屏幕坐标、深度信息、世界坐标位置、法线和纹理坐标)
+Fragment ConstructFragment(int x, int y, float z, float viewDepth,
+                           Triangle& tri, Vector3D& barycentric)
 {
     Fragment frag;
+    // 设置片元的屏幕坐标
     frag.screenPos.x = x;
     frag.screenPos.y = y;
     frag.screenDepth = z;
 
-    // 计算片段的世界空间位置、法线、纹理坐标
-    frag.worldSpacePos = CorrectPerspective(viewDepth, std::vector<Color>{tri[0].worldSpacePos, tri[1].worldSpacePos, tri[2].worldSpacePos}, tri, barycentric);
-    frag.normal = CorrectPerspective(viewDepth, std::vector<Vector3D>{tri[0].normal, tri[1].normal, tri[2].normal}, tri, barycentric);
-    frag.texCoord = CorrectPerspective(viewDepth, std::vector<Coord2D>{tri[0].texCoord, tri[1].texCoord, tri[2].texCoord}, tri, barycentric);
+    // 通过重心坐标进行透视校正
+    // 计算世界坐标位置、法线、纹理坐标
+    frag.worldSpacePos = CorrectPerspective(viewDepth,
+                                            std::vector<Color>{tri[0].worldSpacePos,
+                                                               tri[1].worldSpacePos,
+                                                               tri[2].worldSpacePos},
+                                            tri, barycentric);
+    frag.normal = CorrectPerspective(viewDepth,
+                                     std::vector<Vector3D>{tri[0].normal,
+                                                           tri[1].normal,
+                                                           tri[2].normal},
+                                     tri, barycentric);
+    frag.texCoord = CorrectPerspective(viewDepth,
+                                       std::vector<Coord2D>{tri[0].texCoord,
+                                                            tri[1].texCoord,
+                                                            tri[2].texCoord},
+                                       tri, barycentric);
     return frag;
 }
 
@@ -151,10 +162,10 @@ CoordI4D TRendererDevice::GetBoundingBox(Triangle & tri)
     // 更新边界框
     for(int i = 0; i < 3; ++i)
     {
-        xMin = std::min(xMin, tri[i].screenPos.x);
-        yMin = std::min(yMin, tri[i].screenPos.y);
-        xMax = std::max(xMax, tri[i].screenPos.x);
-        yMax = std::max(yMax, tri[i].screenPos.y);
+        xMin = MIN(xMin, tri[i].screenPos.x);
+        yMin = MIN(yMin, tri[i].screenPos.y);
+        xMax = MAX(xMax, tri[i].screenPos.x);
+        yMax = MAX(yMax, tri[i].screenPos.y);
     }
     return {
         xMin > 0 ? xMin : 0,
@@ -192,53 +203,59 @@ EdgeEquation::EdgeEquation(const Triangle &tri)
     delta = 1.f / twoArea;
 }
 
+// 计算边缘方程在像素 (x, y) 处的值
 VectorI3D EdgeEquation::GetResult(int x, int y)
 {
     VectorI3D res = I * x + J * y + K;
     return res;
 }
 
+// 更新 x 方向上的边缘方程结果
 void EdgeEquation::UpX(VectorI3D& res)
 {
     res += I;
 }
 
+// 更新 y 方向上的边缘方程结果
 void EdgeEquation::UpY(VectorI3D& res)
 {
     res += J;
 }
 
+// 计算给定边缘方程值的重心坐标
 Vector3D EdgeEquation::GetBarycentric(VectorI3D val)
 {
     return {val.y * delta, val.z * delta, val.x * delta};
 }
 
-/********************************************************************************/
+/*********************************************************/
 // 初始化裁剪平面和屏幕边界
 TRendererDevice::TRendererDevice(int w, int h):shader(nullptr), w(w), h(h), frameBuffer(w, h)
 {
-    {// set view planes
-        // near
+    // 设置视口平面
+    {
+        // 近裁剪平面
         viewPlanes[0] = {0, 0, 1.f, 1.f};
-        // far
+        // 远裁剪平面
         viewPlanes[1] = {0, 0, -1.f, 1.f};
-        // left
+        // 左裁剪平面
         viewPlanes[2] = {1.f, 0, 0, 1.f};
-        // right
+        // 右裁剪平面
         viewPlanes[3] = {-1.f, 0, 0, 1.f};
-        // top
+        // 上裁剪平面
         viewPlanes[4] = {0, 1.f, 0, 1.f};
-        // bottom
+        // 下裁剪平面
         viewPlanes[5] = {0, -1.f, 0, 1.f};
     }
-    {// set screen border
-        // left
+    // 设置屏幕边界线
+    {
+        // 左边界线
         screenLines[0] = {1.f, 0, 0};
-        // right
+        // 右边界线
         screenLines[1] = {-1.f, 0, (float)w};
-        // bottom
+        // 下边界线
         screenLines[2] = {0, 1.f, 0};
-        // top
+        // 上边界线
         screenLines[3] = {0, -1.f, (float)h};
     }
 }
@@ -246,6 +263,8 @@ TRendererDevice::TRendererDevice(int w, int h):shader(nullptr), w(w), h(h), fram
 
 /*********************************************************/
 // Half-Space 三角形光栅化算法
+// 通过逐像素遍历三角形的包围盒,
+// 利用边缘方程和重心坐标进行光栅化和深度测试
 void TRendererDevice::RasterizationTriangle(Triangle &tri)
 {
     CoordI4D boundingBox = GetBoundingBox(tri);
@@ -253,10 +272,16 @@ void TRendererDevice::RasterizationTriangle(Triangle &tri)
     int yMin = boundingBox[1];
     int xMax = boundingBox[2];
     int yMax = boundingBox[3];
+
+    // 初始化三角形边缘方程
     EdgeEquation triEdge(tri);
+
+    // 面剔除和零面积剔除
     if(faceCulling && triEdge.twoArea <= 0) return;
     else if(triEdge.twoArea == 0) return;
+
     Fragment frag;
+    // 初始y坐标的边缘方程结果
     VectorI3D cy = triEdge.GetResult(xMin, yMin);
     for(int y = yMin; y <= yMax; y++)
     {
@@ -265,18 +290,31 @@ void TRendererDevice::RasterizationTriangle(Triangle &tri)
         {
             if(JudgeInsideTriangle(triEdge, cx))
             {
+                // 重心坐标
                 Vector3D barycentric = triEdge.GetBarycentric(cx);
-                float screenDepth = CalculateInterpolation(tri[0].screenDepth, tri[1].screenDepth, tri[2].screenDepth, barycentric);
+                // 计算屏幕深度
+                float screenDepth = CalculateInterpolation(tri[0].screenDepth,
+                        tri[1].screenDepth, tri[2].screenDepth, barycentric);
+
+                // 深度测试
                 if (frameBuffer.JudgeDepth(x, y, screenDepth))
                 {
-                    float viewDepth = 1.0f / (barycentric.x / tri[0].ndcSpacePos.w + barycentric.y / tri[1].ndcSpacePos.w + barycentric.z / tri[2].ndcSpacePos.w);
+                    // 视图深度
+                    float viewDepth = 1.0f / (barycentric.x / tri[0].ndcSpacePos.w
+                            + barycentric.y / tri[1].ndcSpacePos.w
+                            + barycentric.z / tri[2].ndcSpacePos.w);
+
+                    // 构造片元并执行片元着色器
                     frag = ConstructFragment(x, y, screenDepth, viewDepth, tri, barycentric);
                     shader->FragmentShader(frag);
+                    // 设置帧缓冲中的像素颜色
                     frameBuffer.SetPixel(frag.screenPos.x,frag.screenPos.y,frag.fragmentColor);
                 }
             }
+            // 更新x坐标的边缘方程结果
             triEdge.UpX(cx);
         }
+        // 更新y坐标的边缘方程结果
         triEdge.UpY(cy);
     }
 }
@@ -286,10 +324,13 @@ void TRendererDevice::RasterizationTriangle(Triangle &tri)
 // Bresenham 画线算法
 void TRendererDevice::DrawLine(Line& line)
 {
+    // 将线段的两个端点坐标限制在屏幕范围内
     int x0 = glm::clamp(static_cast<int>(line[0].x), 0, w - 1);
     int x1 = glm::clamp(static_cast<int>(line[1].x), 0, w - 1);
     int y0 = glm::clamp(static_cast<int>(line[0].y), 0, h - 1);
     int y1 = glm::clamp(static_cast<int>(line[1].y), 0, h - 1);
+
+    // 判断是否需要交换 x 和 y 以处理陡峭的线段
     bool steep = false;
     if (abs(x0 - x1) < abs(y0 - y1))
     {
@@ -297,21 +338,34 @@ void TRendererDevice::DrawLine(Line& line)
         std::swap(x1, y1);
         steep = true;
     }
+
+    // 确保线段从左到右绘制
     if (x0 > x1)
     {
         std::swap(x0, x1);
         std::swap(y0, y1);
     }
+
     int dx = x1 - x0;
     int dy = y1 - y0;
+    // 确定y方向的步长
     int k = dy > 0 ? 1 : -1;
     if (dy < 0)dy = -dy;
+
+    // 初始化误差项
     float e = -dx;
     int x = x0, y = y0;
+
+    // 使用Bresenham算法逐点绘制线段
     while (x != x1)
     {
-        if (steep)frameBuffer.SetPixel(y, x, lineColor);
-        else frameBuffer.SetPixel(x, y, lineColor);
+        // 根据陡峭与否设置像素点
+        if (steep)
+            frameBuffer.SetPixel(y, x, lineColor);
+        else
+            frameBuffer.SetPixel(x, y, lineColor);
+
+        // 更新误差和y坐标
         e += (2 * dy);
         if (e > 0)
         {
@@ -438,10 +492,14 @@ std::vector<Triangle> TRendererDevice::ClipTriangle(Triangle &tri)
             }
             else if(!code[i][0] && code[k][0])	// 边与近裁剪平面相交
             {
+                // 计算顶点 i 和 k 所在边与近裁剪平面的交点
                 float da = CalculateDistance(tri[i].clipSpacePos, viewPlanes[0]);
                 float db = CalculateDistance(tri[k].clipSpacePos, viewPlanes[0]);
-                float alpha = da / (da - db);
+
+                float alpha = da / (da - db);   // 计算交点处的插值系数
+                // 根据插值系数计算交点的屏幕坐标
                 Vertex np = CalculateInterpolation(tri[i], tri[k], alpha);
+
                 res.push_back(np);
             }
             else if(code[i][0] && !code[k][0])	// 边与近裁剪平面相交
@@ -462,7 +520,7 @@ std::vector<Triangle> TRendererDevice::ClipTriangle(Triangle &tri)
 
 
 /*********************************************************/
-// 处理三角形，并根据渲染模式(TRIANGLE,LINE,POINT)选择相应的渲染方式
+// 处理三角形渲染
 void TRendererDevice::ProcessTriangle(Triangle &tri)
 {
     //对每个顶点应用顶点着色器
@@ -494,48 +552,12 @@ void TRendererDevice::Render()
     for (int i = 0; i < indices.size(); i += 3)
     {
         assert(i + 1 < indices.size() && i + 2 < indices.size());
-        triangleList.push_back({vertexList.at(indices.at(i)), vertexList.at(indices.at(i + 1)), vertexList.at(indices.at(i + 2))});
+        triangleList.push_back({vertexList.at(indices.at(i)),
+                                vertexList.at(indices.at(i + 1)),
+                                vertexList.at(indices.at(i + 2))});
     }
     if(multiThread)
     {
-        /*********************************************************/
-        //tbb
-//        tbb::parallel_for(tbb::blocked_range<size_t>(0, triangleList.size()),
-//        [&](tbb::blocked_range<size_t> r)
-//        {
-//            for(size_t i = r.begin(); i < r.end(); ++i)
-//                ProcessTriangle(triangleList[i]);
-//        });
-
-
-        /*********************************************************/
-        //c++ Thread
-//        std::vector<std::thread> threads;
-//        size_t numThreads = 12; // 要开启的线程数量
-
-//        // 计算每个线程处理的元素数量
-//        size_t elementsPerThread = triangleList.size() / numThreads;
-//        size_t remainder = triangleList.size() % numThreads;
-
-//        // 创建线程
-//        size_t startIdx = 0;
-//        for (size_t i = 0; i < numThreads; ++i) {
-//            size_t threadElements = elementsPerThread + (i < remainder ? 1 : 0);
-//            threads.emplace_back([&](size_t start, size_t end) {
-//                for (size_t idx = start; idx < end; ++idx) {
-//                    ProcessTriangle(triangleList[idx]);
-//                }
-//            }, startIdx, startIdx + threadElements);
-//            startIdx += threadElements;
-//        }
-
-//        // 等待线程执行完毕
-//        for (auto& thread : threads) {
-//            thread.join();
-//        }
-
-        /*********************************************************/
-
         #pragma omp parallel for
         for(size_t i = 0; i < triangleList.size(); ++i){
             ProcessTriangle(triangleList[i]);

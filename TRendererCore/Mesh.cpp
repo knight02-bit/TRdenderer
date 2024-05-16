@@ -1,6 +1,6 @@
 #include "Mesh.h"
 
-
+// 绘制网格, 根据索引和顶点数据进行渲染
 void Mesh::Draw()
 {
     TRendererDevice::GetInstance().vertexList = vertices;

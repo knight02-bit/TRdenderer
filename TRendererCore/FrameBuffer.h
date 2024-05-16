@@ -19,11 +19,12 @@ public:
     bool SaveImage(QString filePath);
     void ClearBuffer(Color color);
     QImage& GetImage(){return colorBuffer;}
+
 private:
-	int w;
-	int h;
-    std::vector<float> depthBuffer;
-    QImage colorBuffer;
+    int w;                          // 帧缓冲区宽度
+    int h;                          // 帧缓冲区高度
+    std::vector<float> depthBuffer; // 深度缓冲区
+    QImage colorBuffer;             // 颜色缓冲区
 };
 
 #endif
